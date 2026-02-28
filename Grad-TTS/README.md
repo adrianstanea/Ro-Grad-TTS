@@ -1,217 +1,217 @@
-# Speech-Backbones (Romanian Adaptation Fork)
+# Grad-TTS for Romanian (Ro-Grad-TTS)
 
-This is a fork of the original [Speech-Backbones repository](https://github.com/huawei-noah/Speech-Backbones) by Huawei Noah's Ark Lab, adapted for Romanian text-to-speech synthesis using the SWARA 1.0 dataset.
+Adaptation of [Grad-TTS](https://arxiv.org/abs/2105.06337) (ICML 2021) for Romanian text-to-speech synthesis, trained on the [SWARA 1.0](https://huggingface.co/datasets/swara/swara1.0) dataset.
 
-## Original Repository
+## Quick Start
 
-The original repository contains open-sourced speech technology implementations including:
-- **Grad-TTS**: Diffusion-based text-to-speech model (ICML 2021)
-- **SPIRAL**: Self-supervised speech pre-training (ICLR 2022)
-- **DiffVC**: Diffusion-based voice conversion (ICLR 2022, Oral)
+### Installation
 
-## Romanian Adaptation Work
-
-This fork focuses on adapting Grad-TTS for Romanian language synthesis.
-
-### Key Contributions
-
-1. **Romanian Language Support**
-   - Integration with SWARA 1.0 Romanian speech dataset
-   - Espeak-based phonemization replacing CMUDict
-   - Romanian-specific text processing pipeline
-
-2. **Multi-Speaker Fine-tuning**
-   - Support for BAS and SGS speaker identities
-   - Speaker embedding dimension configuration
-   - Fine-tuning scripts for few-shot adaptation
-
-3. **Enhanced Inference Pipeline**
-   - Romanian-specific inference script (`inference_RO.py`)
-   - Automated sample generation workflow
-   - Real-time factor (RTF) measurement tools
-
-## Training Workflow
-
-### Prerequisites
-
-1. Install dependencies:
-   ```bash
-   cd Grad-TTS
-   pip install -r requirements.txt
-   ```
-
-2. Build monotonic alignment:
-   ```bash
-   cd model/monotonic_align
-   python setup.py build_ext --inplace
-   cd ../..
-   ```
-
-3. Prepare SWARA 1.0 dataset filelists in `resources/filelists/SWARA_1_0/`
-
-### Base Model Training
-
-Train base Romanian model:
+Requires Python >= 3.9 and [espeak-ng](https://github.com/espeak-ng/espeak-ng) installed on your system.
 
 ```bash
-export CUDA_VISIBLE_DEVICES=0
-python train_multi_speaker.py
+# Install espeak-ng (required for Romanian phonemization)
+# Ubuntu/Debian:
+sudo apt-get install espeak-ng
+# macOS:
+brew install espeak-ng
+
+# Install the package
+cd Grad-TTS
+pip install -e .
+
+# Build the monotonic alignment C extension
+cd model/monotonic_align
+python setup.py build_ext --inplace
+cd ../..
+```
+
+Or using [uv](https://docs.astral.sh/uv/):
+
+```bash
+cd Grad-TTS
+uv pip install -e .
+```
+
+### Synthesize Speech
+
+**From HuggingFace Hub** (once models are published to `adrianstanea/Ro-Grad-TTS`):
+
+```python
+from gradtts_ro import GradTTSRomanian
+
+pipe = GradTTSRomanian.from_pretrained("adrianstanea/Ro-Grad-TTS")
+audio = pipe("Buna ziua! Aceasta este o demonstratie.")
+pipe.save_wav(audio, "output.wav")
+```
+
+**From local checkpoints:**
+
+```python
+from gradtts_ro import GradTTSRomanian
+
+pipe = GradTTSRomanian.from_local(
+    model_path="checkpts/grad-tts-ro.pt",
+    vocoder_path="checkpts/hifigan.pt",
+    vocoder_config_path="checkpts/hifigan-config.json",
+)
+audio = pipe("Buna ziua! Aceasta este o demonstratie.")
+pipe.save_wav(audio, "output.wav")
+```
+
+**Using the example script:**
+
+```bash
+# From HuggingFace Hub
+python examples/synthesize.py
+
+# From local checkpoints
+python examples/synthesize.py \
+    --model-path checkpts/grad-tts-ro.pt \
+    --vocoder-path checkpts/hifigan.pt \
+    --vocoder-config checkpts/hifigan-config.json
+
+# Custom text
+python examples/synthesize.py --text "Salut, cum te cheama?"
+```
+
+## API Reference
+
+### `GradTTSRomanian.from_pretrained()`
+
+```python
+pipe = GradTTSRomanian.from_pretrained(
+    repo_id="adrianstanea/Ro-Grad-TTS",  # HuggingFace repo
+    variant="base",                       # Model variant (see below)
+    device=None,                          # "cpu", "cuda", or auto-detect
+)
+```
+
+**Available variants:**
+
+| Variant | Description |
+|---------|-------------|
+| `base` | Baseline SWARA model (1000 epochs) |
+| `bas-10_100` | BAS speaker, 10 samples, 100 fine-tune epochs |
+| `bas-950_100` | BAS speaker, 950 samples, 100 fine-tune epochs |
+| `sgs-10_100` | SGS speaker, 10 samples, 100 fine-tune epochs |
+| `sgs-950_100` | SGS speaker, 950 samples, 100 fine-tune epochs |
+
+### `GradTTSRomanian.from_local()`
+
+```python
+pipe = GradTTSRomanian.from_local(
+    model_path="path/to/grad-tts.pt",
+    vocoder_path="path/to/hifigan",
+    vocoder_config_path="path/to/hifigan-config.json",
+    config_path=None,   # Optional: model config JSON, uses defaults if None
+    device=None,        # "cpu", "cuda", or auto-detect
+)
+```
+
+### Synthesis
+
+```python
+# Single text
+audio = pipe("Romanian text here.", n_timesteps=50, temperature=1.5, length_scale=0.91)
+
+# Batch
+audios = pipe(["Text one.", "Text two."])
+
+# Save to file
+pipe.save_wav(audio, "output.wav")
+```
+
+**Parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `n_timesteps` | 50 | Diffusion reverse steps (more = higher quality, slower) |
+| `temperature` | 1.5 | Sampling variance (higher = more diverse) |
+| `length_scale` | 0.91 | Speech pace (> 1.0 = slower) |
+| `speaker_id` | None | Speaker ID for multi-speaker models |
+
+## Project Structure
+
+```
+Grad-TTS/
+├── gradtts_ro/              # Inference package (pip installable)
+│   ├── pipeline.py          # GradTTSRomanian class
+│   ├── text_processing.py   # Espeak phonemization
+│   ├── symbols.py           # IPA symbol set
+│   ├── cleaners.py          # Text normalization
+│   └── vocoder/             # Vendored HiFi-GAN
+├── model/                   # Grad-TTS model architecture
+│   ├── tts.py               # GradTTS module
+│   ├── text_encoder.py      # Text encoder
+│   ├── diffusion.py         # Diffusion decoder
+│   └── monotonic_align/     # MAS C extension
+├── examples/
+│   └── synthesize.py        # Example synthesis script
+├── tools/text_processing/   # Text processing (used by training scripts)
+├── train.py                 # Training script
+├── finetune.sh              # Speaker fine-tuning script
+├── inference_RO.py          # Legacy inference script
+├── config.json              # Model hyperparameters template
+├── pyproject.toml           # Package definition
+└── uv.lock                  # Reproducible dependency lock
+```
+
+## Training
+
+Training requires the optional `[train]` dependencies and the SWARA 1.0 dataset.
+
+```bash
+pip install -e ".[train]"
+```
+
+### Base Model
+
+Edit `params.py` to point to your SWARA 1.0 filelists, then:
+
+```bash
+python train.py
 ```
 
 ### Fine-tuning for Specific Speakers
 
-Use the provided fine-tuning script:
-
 ```bash
-chmod +x finetune.sh
-./finetune.sh
-```
-
-This script fine-tunes the base model for:
-- BAS speaker (10 and 950 sample variants)
-- SGS speaker (10 and 950 sample variants)
-
-## Inference Workflow
-
-### Quick Start
-
-1. Download or use trained checkpoints from `checkpts/` directory
-2. Prepare text file with Romanian sentences (format: `filepath|text|speaker`)
-3. Run Romanian inference:
-
-```bash
-python inference_RO.py \
-  -f resources/filelists/synthesis.txt \
-  -c checkpts/grad-tts-ro-bas-100.pt \
-  -t 50 \
-  --temperature 1.5
-```
-
-### Parameters
-
-- `-f, --file`: Path to text file with synthesis targets
-- `-c, --checkpoint`: Path to trained Grad-TTS checkpoint
-- `-t, --timesteps`: Number of diffusion timesteps (default: 50)
-- `-s, --speaker_id`: Speaker ID for multi-speaker models
-- `--temperature`: Sampling temperature (default: 1.5)
-
-### Output
-
-Generated audio files are saved to timestamped directories under `/workspace/local/samples/grad-tts/{speaker_id}/{epochs}/`
-
-### Checkpoint Naming Convention
-
-Checkpoints follow the pattern: `grad-tts-ro-{speaker_id}-{epochs}.pt`
-- `speaker_id`: Target speaker (bas, sgs, etc.)
-- `epochs`: Number of training epochs
-
-## Generated Samples
-
-This repository includes pre-trained models and generated samples:
-
-### Available Checkpoints
-
-- `grad-tts-ro.pt`: Base Romanian model
-- Fine-tuned speaker-specific models (created via finetune.sh)
-
-### Sample Audio
-
-Generated samples demonstrate:
-- Romanian text-to-speech synthesis quality
-- Speaker adaptation capabilities
-- Various text lengths and complexities
-
-Samples are generated using the inference pipeline and stored with RTF measurements for performance evaluation.
-
-## Model Architecture Details
-
-### Text Processing
-- **Phonemization**: Espeak for Romanian language
-- **Text Encoding**: Character and phoneme-based encoding
-- **Speaker Embedding**: Configurable embedding dimensions
-
-### Training Configuration
-- **Dataset**: SWARA 1.0 Romanian speech corpus
-- **Speakers**: Multi-speaker support (BAS, SGS)
-- **Sampling Rate**: 22kHz
-- **Vocoder**: HiFi-GAN for audio generation
-
-## Technical Implementation
-
-### Key Modifications from Original
-
-1. **Text Processing Pipeline**
-   - Replaced CMUDict with Espeak for Romanian phonemization
-   - Added Romanian-specific text cleaning and normalization
-   - Updated symbol set for Romanian phonemes
-
-2. **Model Configuration**
-   - Speaker embedding dimension: Configurable via `spk_emb_dim`
-   - Multi-speaker support: `n_spks` parameter adjustment
-   - Romanian phoneme set integration
-
-3. **Training Enhancements**
-   - Checkpoint resuming functionality
-   - Validation step configuration
-   - Batch size adaptation for few-shot learning
-
-### File Structure
-
-```
-Grad-TTS/
-├── checkpts/                 # Model checkpoints
-│   ├── grad-tts-ro.pt       # Base Romanian model
-│   └── hifigan.pt           # Vocoder model
-├── resources/
-│   └── filelists/SWARA_1_0/  # Romanian dataset filelists
-├── inference_RO.py          # Romanian-specific inference
-├── finetune.sh             # Speaker fine-tuning script
-└── tools/text_processing/   # Romanian text processing
-```
-
-### Performance
-
-- Real-time Factor (RTF) measurement included
-- Support for various inference speeds via timestep control
-- Temperature-controlled synthesis quality
-
-## Usage Examples
-
-### Example 1: Basic Romanian Synthesis
-
-```bash
-# Create text file
-echo "filepath1|Salut, aceasta este o propoziție în română.|speaker1" > test.txt
-
-# Run inference
-python inference_RO.py -f test.txt -c checkpts/grad-tts-ro.pt -t 50
-```
-
-### Example 2: Speaker-Specific Fine-tuning
-
-```bash
-# Fine-tune for BAS speaker with limited data
 python train.py \
-  --checkpoint_path checkpts/grad-tts-ro.pt \
-  --n_epochs 100 \
-  --train_filelist_path resources/filelists/SWARA_1_0/finetune_meta_bas_10.csv \
-  --batch_size 5 \
-  --log_dir log_dir/bas_10
+    --checkpoint_path path/to/base_model.pt \
+    --train_filelist_path resources/filelists/SWARA_1_0/finetune_meta_bas_10.csv \
+    --n_epochs 100 \
+    --batch_size 5 \
+    --log_dir log_dir/bas_10
 ```
 
-### Example 3: Batch Inference
+Or use the batch fine-tuning script (edit paths inside first):
 
 ```bash
-# Use the shell script for automated fine-tuning
-chmod +x finetune.sh
 ./finetune.sh
 ```
 
-This will process all configured speaker/sample combinations automatically.
+## Model Weights
+
+Model checkpoints are hosted on HuggingFace Hub at [`adrianstanea/Ro-Grad-TTS`](https://huggingface.co/adrianstanea/Ro-Grad-TTS):
+
+```
+adrianstanea/Ro-Grad-TTS/
+├── config.json
+├── hifigan_config.json
+├── models/
+│   ├── swara/grad-tts-base-1000.pt
+│   ├── bas/grad-tts-bas-{10,950}_100.pt
+│   ├── sgs/grad-tts-sgs-{10,950}_100.pt
+│   └── vocoder/hifigan_univ_v1
+```
+
+## Key Changes from Original Grad-TTS
+
+- **Phonemization**: Espeak (Romanian) replaces CMUDict (English)
+- **Model**: `spk_emb_dim` and `n_spks` passed to TextEncoder; mel cropping fix
+- **Training**: Argparse support, checkpoint resume, SWARA 1.0 integration
+- **Inference**: `gradtts_ro` package with HuggingFace Hub integration, CPU/CUDA auto-detection
 
 ## Citation
-
-If you use this Romanian adaptation, please cite both the original work and the SWARA dataset:
 
 ```bibtex
 @article{popov2021grad,
@@ -224,4 +224,4 @@ If you use this Romanian adaptation, please cite both the original work and the 
 
 ## License
 
-This project maintains the same license as the original Speech-Backbones repository. See individual component directories for specific license terms.
+MIT License. See [LICENSE](LICENSE) for details.
