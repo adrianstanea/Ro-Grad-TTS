@@ -1,11 +1,10 @@
-from phonemizer.backend import EspeakBackend
-
 from gradtts_ro.symbols import symbols, _symbol_to_id
 from gradtts_ro.cleaners import to_lowercase, collapse_whitespace
 
 
 def create_phonemizer():
     """Create an Espeak backend for Romanian phonemization."""
+    from phonemizer.backend import EspeakBackend
     return EspeakBackend(
         language='ro',
         preserve_punctuation=True,
