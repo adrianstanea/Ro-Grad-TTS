@@ -1,3 +1,9 @@
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from gradtts_ro.pipeline import GradTTSRomanian
+
+
 def __getattr__(name):
     if name == "GradTTSRomanian":
         from gradtts_ro.pipeline import GradTTSRomanian

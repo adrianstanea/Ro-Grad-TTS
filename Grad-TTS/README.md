@@ -2,39 +2,59 @@
 
 Adaptation of [Grad-TTS](https://arxiv.org/abs/2105.06337) (ICML 2021) for Romanian text-to-speech synthesis, trained on the [SWARA 1.0](https://huggingface.co/datasets/swara/swara1.0) dataset.
 
-## Quick **Start**
+## Prerequisites
 
-### Installation
+- Python >= 3.9
+- [espeak-ng](https://github.com/espeak-ng/espeak-ng) (system package, required for Romanian phonemization)
+- A C compiler (gcc/clang) for building the Cython extension
 
-Requires Python >= 3.9 and [espeak-ng](https://github.com/espeak-ng/espeak-ng) installed on your system.
+Install espeak-ng:
 
 ```bash
-# Install espeak-ng (required for Romanian phonemization)
-# Ubuntu/Debian:
+# Ubuntu/Debian
 sudo apt-get install espeak-ng
-# macOS:
+
+# macOS
 brew install espeak-ng
+```
 
-# Install the package
+## Installation
+
+### Using uv (recommended)
+
+```bash
 cd Grad-TTS
-pip install -e .
 
-# Build the monotonic alignment C extension
+# Install the package and all dependencies
+uv sync
+
+# Build the monotonic alignment C extension (must run from this directory)
 cd model/monotonic_align
-python setup.py build_ext --inplace
+uv run python setup.py build_ext --inplace
 cd ../..
 ```
 
-Or using [uv](https://docs.astral.sh/uv/):
+### Using pip
 
 ```bash
 cd Grad-TTS
-uv pip install -e .
+
+pip install -e .
+
+# Install Cython (needed to build the C extension)
+pip install Cython numpy
+
+# Build the monotonic alignment C extension (must run from this directory)
+cd model/monotonic_align
+python3 setup.py build_ext --inplace
+cd ../..
 ```
 
-### Synthesize Speech
+> **Note:** The `setup.py` for monotonic_align must be run from inside `model/monotonic_align/`, not from the project root. It compiles `core.pyx` into a shared library (`.so`) used at runtime.
 
-**From HuggingFace Hub** (once models are published to `adrianstanea/Ro-Grad-TTS`):
+## Quick Start
+
+### From HuggingFace Hub
 
 ```python
 from gradtts_ro import GradTTSRomanian
@@ -44,34 +64,34 @@ audio = pipe("Buna ziua! Aceasta este o demonstratie.")
 pipe.save_wav(audio, "output.wav")
 ```
 
-**From local checkpoints:**
+### From local checkpoints
 
 ```python
 from gradtts_ro import GradTTSRomanian
 
 pipe = GradTTSRomanian.from_local(
-    model_path="checkpts/grad-tts-ro.pt",
-    vocoder_path="checkpts/hifigan.pt",
-    vocoder_config_path="checkpts/hifigan-config.json",
+    model_path="path/to/grad-tts-base-1000.pt",
+    vocoder_path="path/to/hifigan_univ_v1",
+    vocoder_config_path="path/to/hifigan_config.json",
 )
 audio = pipe("Buna ziua! Aceasta este o demonstratie.")
 pipe.save_wav(audio, "output.wav")
 ```
 
-**Using the example script:**
+### Using the example script
 
 ```bash
 # From HuggingFace Hub
-python examples/synthesize.py
+uv run python examples/synthesize.py
 
 # From local checkpoints
-python examples/synthesize.py \
-    --model-path checkpts/grad-tts-ro.pt \
-    --vocoder-path checkpts/hifigan.pt \
-    --vocoder-config checkpts/hifigan-config.json
+uv run python examples/synthesize.py \
+    --model-path path/to/grad-tts-base-1000.pt \
+    --vocoder-path path/to/hifigan_univ_v1 \
+    --vocoder-config path/to/hifigan_config.json
 
 # Custom text
-python examples/synthesize.py --text "Salut, cum te cheama?"
+uv run python examples/synthesize.py --text "Salut, cum te cheama?"
 ```
 
 ## API Reference
@@ -86,31 +106,13 @@ pipe = GradTTSRomanian.from_pretrained(
 )
 ```
 
-**Available variants:**
-
-| Variant | Description |
-|---------|-------------|
-| `base` | Baseline SWARA model (1000 epochs) |
-| `bas-10_15` | BAS speaker, 10 samples, 15 fine-tune epochs |
-| `bas-10_50` | BAS speaker, 10 samples, 50 fine-tune epochs |
-| `bas-10_100` | BAS speaker, 10 samples, 100 fine-tune epochs |
-| `bas-950_15` | BAS speaker, 950 samples, 15 fine-tune epochs |
-| `bas-950_50` | BAS speaker, 950 samples, 50 fine-tune epochs |
-| `bas-950_100` | BAS speaker, 950 samples, 100 fine-tune epochs |
-| `sgs-10_15` | SGS speaker, 10 samples, 15 fine-tune epochs |
-| `sgs-10_50` | SGS speaker, 10 samples, 50 fine-tune epochs |
-| `sgs-10_100` | SGS speaker, 10 samples, 100 fine-tune epochs |
-| `sgs-950_15` | SGS speaker, 950 samples, 15 fine-tune epochs |
-| `sgs-950_50` | SGS speaker, 950 samples, 50 fine-tune epochs |
-| `sgs-950_100` | SGS speaker, 950 samples, 100 fine-tune epochs |
-
 ### `GradTTSRomanian.from_local()`
 
 ```python
 pipe = GradTTSRomanian.from_local(
     model_path="path/to/grad-tts.pt",
-    vocoder_path="path/to/hifigan",
-    vocoder_config_path="path/to/hifigan-config.json",
+    vocoder_path="path/to/hifigan_univ_v1",
+    vocoder_config_path="path/to/hifigan_config.json",
     config_path=None,   # Optional: model config JSON, uses defaults if None
     device=None,        # "cpu", "cuda", or auto-detect
 )
@@ -129,14 +131,50 @@ audios = pipe(["Text one.", "Text two."])
 pipe.save_wav(audio, "output.wav")
 ```
 
-**Parameters:**
-
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `n_timesteps` | 50 | Diffusion reverse steps (more = higher quality, slower) |
 | `temperature` | 1.5 | Sampling variance (higher = more diverse) |
 | `length_scale` | 0.91 | Speech pace (> 1.0 = slower) |
 | `speaker_id` | None | Speaker ID for multi-speaker models |
+
+## Available Model Variants
+
+| Variant | Speaker | Samples | Fine-tune Epochs |
+|---------|---------|---------|-----------------|
+| `base` | SWARA baseline | all | 1000 |
+| `bas-10_15` | BAS | 10 | 15 |
+| `bas-10_50` | BAS | 10 | 50 |
+| `bas-10_100` | BAS | 10 | 100 |
+| `bas-950_15` | BAS | 950 | 15 |
+| `bas-950_50` | BAS | 950 | 50 |
+| `bas-950_100` | BAS | 950 | 100 |
+| `sgs-10_15` | SGS | 10 | 15 |
+| `sgs-10_50` | SGS | 10 | 50 |
+| `sgs-10_100` | SGS | 10 | 100 |
+| `sgs-950_15` | SGS | 950 | 15 |
+| `sgs-950_50` | SGS | 950 | 50 |
+| `sgs-950_100` | SGS | 950 | 100 |
+
+```python
+# Load a specific variant
+pipe = GradTTSRomanian.from_pretrained("adrianstanea/Ro-Grad-TTS", variant="bas-950_100")
+```
+
+## Model Weights
+
+Checkpoints are hosted on HuggingFace Hub at [`adrianstanea/Ro-Grad-TTS`](https://huggingface.co/adrianstanea/Ro-Grad-TTS):
+
+```
+adrianstanea/Ro-Grad-TTS/
+├── config.json
+├── hifigan_config.json
+├── models/
+│   ├── swara/grad-tts-base-1000.pt
+│   ├── bas/grad-tts-bas-{10,950}_{15,50,100}.pt
+│   ├── sgs/grad-tts-sgs-{10,950}_{15,50,100}.pt
+│   └── vocoder/hifigan_univ_v1
+```
 
 ## Project Structure
 
@@ -152,14 +190,12 @@ Grad-TTS/
 │   ├── tts.py               # GradTTS module
 │   ├── text_encoder.py      # Text encoder
 │   ├── diffusion.py         # Diffusion decoder
-│   └── monotonic_align/     # MAS C extension
+│   └── monotonic_align/     # MAS C extension (requires build step)
 ├── examples/
 │   └── synthesize.py        # Example synthesis script
 ├── tools/text_processing/   # Text processing (used by training scripts)
 ├── train.py                 # Training script
 ├── finetune.sh              # Speaker fine-tuning script
-├── inference_RO.py          # Legacy inference script
-├── config.json              # Model hyperparameters template
 ├── pyproject.toml           # Package definition
 └── uv.lock                  # Reproducible dependency lock
 ```
@@ -169,7 +205,7 @@ Grad-TTS/
 Training requires the optional `[train]` dependencies and the SWARA 1.0 dataset.
 
 ```bash
-pip install -e ".[train]"
+uv sync --extra train
 ```
 
 ### Base Model
@@ -177,13 +213,13 @@ pip install -e ".[train]"
 Edit `params.py` to point to your SWARA 1.0 filelists, then:
 
 ```bash
-python train.py
+uv run python train.py
 ```
 
 ### Fine-tuning for Specific Speakers
 
 ```bash
-python train.py \
+uv run python train.py \
     --checkpoint_path path/to/base_model.pt \
     --train_filelist_path resources/filelists/SWARA_1_0/finetune_meta_bas_10.csv \
     --n_epochs 100 \
@@ -195,21 +231,6 @@ Or use the batch fine-tuning script (edit paths inside first):
 
 ```bash
 ./finetune.sh
-```
-
-## Model Weights
-
-Model checkpoints are hosted on HuggingFace Hub at [`adrianstanea/Ro-Grad-TTS`](https://huggingface.co/adrianstanea/Ro-Grad-TTS):
-
-```
-adrianstanea/Ro-Grad-TTS/
-├── config.json
-├── hifigan_config.json
-├── models/
-│   ├── swara/grad-tts-base-1000.pt
-│   ├── bas/grad-tts-bas-{10,950}_100.pt
-│   ├── sgs/grad-tts-sgs-{10,950}_100.pt
-│   └── vocoder/hifigan_univ_v1
 ```
 
 ## Key Changes from Original Grad-TTS
