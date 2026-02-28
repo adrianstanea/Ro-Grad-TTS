@@ -1,1 +1,3 @@
-# gradtts_ro - Romanian Grad-TTS inference package
+from gradtts_ro.pipeline import GradTTSRomanian
+
+__all__ = ["GradTTSRomanian"]
