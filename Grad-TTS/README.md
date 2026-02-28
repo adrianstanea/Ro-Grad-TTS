@@ -2,7 +2,7 @@
 
 Adaptation of [Grad-TTS](https://arxiv.org/abs/2105.06337) (ICML 2021) for Romanian text-to-speech synthesis, trained on the [SWARA 1.0](https://huggingface.co/datasets/swara/swara1.0) dataset.
 
-## Quick Start
+## Quick **Start**
 
 ### Installation
 
@@ -91,9 +91,17 @@ pipe = GradTTSRomanian.from_pretrained(
 | Variant | Description |
 |---------|-------------|
 | `base` | Baseline SWARA model (1000 epochs) |
+| `bas-10_15` | BAS speaker, 10 samples, 15 fine-tune epochs |
+| `bas-10_50` | BAS speaker, 10 samples, 50 fine-tune epochs |
 | `bas-10_100` | BAS speaker, 10 samples, 100 fine-tune epochs |
+| `bas-950_15` | BAS speaker, 950 samples, 15 fine-tune epochs |
+| `bas-950_50` | BAS speaker, 950 samples, 50 fine-tune epochs |
 | `bas-950_100` | BAS speaker, 950 samples, 100 fine-tune epochs |
+| `sgs-10_15` | SGS speaker, 10 samples, 15 fine-tune epochs |
+| `sgs-10_50` | SGS speaker, 10 samples, 50 fine-tune epochs |
 | `sgs-10_100` | SGS speaker, 10 samples, 100 fine-tune epochs |
+| `sgs-950_15` | SGS speaker, 950 samples, 15 fine-tune epochs |
+| `sgs-950_50` | SGS speaker, 950 samples, 50 fine-tune epochs |
 | `sgs-950_100` | SGS speaker, 950 samples, 100 fine-tune epochs |
 
 ### `GradTTSRomanian.from_local()`

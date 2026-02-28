@@ -48,9 +48,17 @@ DEFAULT_CONFIG = {
 # Variant name -> (subfolder, filename) in the HuggingFace repo
 VARIANT_MAP = {
     "base": ("models/swara", "grad-tts-base-1000.pt"),
+    "bas-10_15": ("models/bas", "grad-tts-bas-10_15.pt"),
+    "bas-10_50": ("models/bas", "grad-tts-bas-10_50.pt"),
     "bas-10_100": ("models/bas", "grad-tts-bas-10_100.pt"),
+    "bas-950_15": ("models/bas", "grad-tts-bas-950_15.pt"),
+    "bas-950_50": ("models/bas", "grad-tts-bas-950_50.pt"),
     "bas-950_100": ("models/bas", "grad-tts-bas-950_100.pt"),
+    "sgs-10_15": ("models/sgs", "grad-tts-sgs-10_15.pt"),
+    "sgs-10_50": ("models/sgs", "grad-tts-sgs-10_50.pt"),
     "sgs-10_100": ("models/sgs", "grad-tts-sgs-10_100.pt"),
+    "sgs-950_15": ("models/sgs", "grad-tts-sgs-950_15.pt"),
+    "sgs-950_50": ("models/sgs", "grad-tts-sgs-950_50.pt"),
     "sgs-950_100": ("models/sgs", "grad-tts-sgs-950_100.pt"),
 }
 
